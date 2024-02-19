@@ -26,19 +26,7 @@ function App() {
 			<body>
 				<div>${randomId()}</div>
 				<sushi-snippet src="/counter"> ${Counter()} </sushi-snippet>
-				<sushi-snippet>
-					<div>
-						<a is="boosted-anchor" href="/counter">Load Counter</a>
-						<a is="boosted-anchor" href="/hello">Load Hello</a>
-						<style>
-							@scope {
-								:scope {
-									display: grid;
-								}
-							}
-						</style>
-					</div>
-				</sushi-snippet>
+				<a is="boosted-anchor" href="/hello">Load Hello</a>
 			</body>
 		</html>
 	`;
