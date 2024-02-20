@@ -8,17 +8,20 @@ export type LoadEvent = {
 	url: URL;
 	request: Request;
 	server: Server;
-	action?: {
-		call: Action;
-		data: unknown;
-	};
+	action?: LoadEvent.ActionEvent;
 };
+export namespace LoadEvent {
+	export type ActionEvent<T extends Action = Action> = {
+		call: T;
+		data: Awaited<ReturnType<T>>;
+	};
+}
 
-export function isAction<T extends Action>(
-	event: LoadEvent,
-	action: T
-): event is LoadEvent & { action: { call: T; data?: Awaited<ReturnType<T>> } } {
-	return event.action?.call === action;
+export function actionData<T extends Action>(event: LoadEvent, action: T) {
+	if (event.action?.call === action) {
+		return event.action.data as Awaited<ReturnType<T>>;
+	}
+	return null;
 }
 
 function renderRoute(event: LoadEvent, route: Route, pathname: string, offset = 1): string | null {

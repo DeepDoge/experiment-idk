@@ -1,17 +1,20 @@
 import { html } from '../html';
-import { isAction, type LoadEvent } from '../start';
+import { actionData, type LoadEvent } from '../start';
 
 let count = 0;
 
-function add() {
+function add(event: LoadEvent) {
 	count++;
+	return {
+		date: new Date()
+	};
 }
 function sub() {
 	count--;
 }
 
 export function Counter(event: LoadEvent) {
-	const added = isAction(event, add);
+	const addData = actionData(event, add);
 
 	return html`
 		<div>
@@ -20,7 +23,7 @@ export function Counter(event: LoadEvent) {
 			<button form="${sub}">-</button>
 			<span>${count}</span>
 			<button form="${add}">+</button>
-			${added ? `<div>Added</div>` : ``}
+			${addData ? html`<div>Added at: ${addData.date}</div>` : ``}
 		</div>
 	`;
 }
