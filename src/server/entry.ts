@@ -1,8 +1,6 @@
-let count = 0;
+import { html } from './html'; /* assert { type: 'macro' }; */
 
-function html(strings: TemplateStringsArray, ...values: unknown[]) {
-	return String.raw(strings, ...values);
-}
+let count = 0;
 
 function randomId() {
 	return Math.random().toString(36).slice(2);
@@ -27,7 +25,7 @@ function Layout(innerHTML: string) {
 				</style>
 			</head>
 			<body>
-				<snippet-x src="/"> ${innerHTML} </snippet-x>
+				${innerHTML}
 			</body>
 		</html>`;
 }
@@ -35,7 +33,8 @@ function App() {
 	return html`
 		<div>${randomId()}</div>
 		<snippet-x src="/counter"> ${Counter()} </snippet-x>
-		<a is="anchor-x" href="/hello">Load Hello</a>
+		<a is="anchor-x" href="/hello">Hello</a>
+		<a is="anchor-x" href="/counter">Counter</a>
 	`;
 }
 
@@ -62,7 +61,7 @@ function Hello() {
 
 function PageResponse(pageHTML: string, request: Request) {
 	if (request.headers.get('X-Sushi-Request') !== 'true') {
-		return new Response(Layout(pageHTML), {
+		return new Response(Layout(html`<snippet-x src="${new URL(request.url).pathname}">${pageHTML}</snippet-x>`), {
 			headers: { 'Content-Type': 'text/html' }
 		});
 	}

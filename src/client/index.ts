@@ -6,8 +6,6 @@ class SnippetElement extends HTMLElement {
 
 	constructor() {
 		super();
-		const root = this.attachShadow({ mode: 'open' });
-		root.innerHTML = `<slot></slot>`;
 	}
 
 	get src(): string | null {
@@ -54,7 +52,7 @@ declare global {
 }
 customElements.define('snippet-x', SnippetElement);
 
-class BoostedFormElement extends HTMLFormElement {
+class EnhancedFormElement extends HTMLFormElement {
 	constructor() {
 		super();
 		this.addEventListener('submit', async (event) => {
@@ -93,19 +91,19 @@ class BoostedFormElement extends HTMLFormElement {
 		});
 	}
 }
-customElements.define('form-x', BoostedFormElement, {
+customElements.define('form-x', EnhancedFormElement, {
 	extends: 'form'
 });
 declare global {
 	interface HTMLElementTagNameMap {
-		'form-x': BoostedFormElement;
+		'form-x': EnhancedFormElement;
 	}
 }
 
-class BoostedAnchorElement extends HTMLAnchorElement {
+class EnhancedAnchorElement extends HTMLAnchorElement {
 	constructor() {
 		super();
-		this.addEventListener('click', async (event) => {
+		/* 		this.addEventListener('click', async (event) => {
 			const anchorUrl = new URL(this.href, location.href);
 			if (anchorUrl.origin !== location.origin) return;
 			event.preventDefault();
@@ -134,14 +132,14 @@ class BoostedAnchorElement extends HTMLAnchorElement {
 			body.replaceChildren(...dom.body.childNodes);
 
 			history.pushState({}, '', anchorUrl.href);
-		});
+		}); */
 	}
 }
-customElements.define('anchor-x', BoostedAnchorElement, {
+customElements.define('anchor-x', EnhancedAnchorElement, {
 	extends: 'a'
 });
 declare global {
 	interface HTMLElementTagNameMap {
-		'anchor-x': BoostedAnchorElement;
+		'anchor-x': EnhancedAnchorElement;
 	}
 }
