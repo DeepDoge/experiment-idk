@@ -8,9 +8,8 @@ function randomId() {
 	return Math.random().toString(36).slice(2);
 }
 
-function App() {
-	return html`
-		<!doctype html>
+function Layout(innerHTML: string) {
+	return html` <!doctype html>
 		<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 			<head>
 				<meta charset="UTF-8" />
@@ -18,17 +17,25 @@ function App() {
 				<title>Document</title>
 				<script type="module" src="/sushi.js"></script>
 				<style>
-					sushi-snippet {
+					snippet-x {
 						display: contents;
+					}
+
+					:root {
+						zoom: 500%;
 					}
 				</style>
 			</head>
 			<body>
-				<div>${randomId()}</div>
-				<sushi-snippet src="/counter"> ${Counter()} </sushi-snippet>
-				<a is="boosted-anchor" href="/hello">Load Hello</a>
+				<snippet-x src="/"> ${innerHTML} </snippet-x>
 			</body>
-		</html>
+		</html>`;
+}
+function App() {
+	return html`
+		<div>${randomId()}</div>
+		<snippet-x src="/counter"> ${Counter()} </snippet-x>
+		<a is="anchor-x" href="/hello">Load Hello</a>
 	`;
 }
 
@@ -37,8 +44,8 @@ function Counter() {
 	const counterSub = randomId();
 	return html`
 		<div>
-			<form id="${counterAdd}" hidden action="?/counter-add" method="post" is="boosted-form"></form>
-			<form id="${counterSub}" hidden action="?/counter-sub" method="post" is="boosted-form"></form>
+			<form id="${counterAdd}" hidden action="?/add" method="post" is="form-x"></form>
+			<form id="${counterSub}" hidden action="?/sub" method="post" is="form-x"></form>
 			<button form="${counterSub}">-</button>
 			<span>${count}</span>
 			<button form="${counterAdd}">+</button>
@@ -47,7 +54,21 @@ function Counter() {
 }
 
 function Hello() {
-	return html`<div>Hello</div>`;
+	return html`
+		<div>Hello</div>
+		<a is="anchor-x" href="/">Back</a>
+	`;
+}
+
+function PageResponse(pageHTML: string, request: Request) {
+	if (request.headers.get('X-Sushi-Request') !== 'true') {
+		return new Response(Layout(pageHTML), {
+			headers: { 'Content-Type': 'text/html' }
+		});
+	}
+	return new Response(pageHTML, {
+		headers: { 'Content-Type': 'text/html' }
+	});
 }
 
 Bun.serve({
@@ -61,43 +82,38 @@ Bun.serve({
 			});
 		}
 
-		if (url.search) {
-			const form = await request.formData();
-
-			if (url.search === '?/counter-add') {
-				count++;
-			}
-			if (url.search === '?/counter-sub') {
-				count--;
-			}
-
-			if (request.headers.get('X-Sushi-Request') !== 'true') {
-				return new Response('', {
-					status: 303,
-					headers: {
-						Location: url.pathname,
-						'Content-Type': 'text/plain'
-					}
-				});
-			}
+		if (url.search === '?/add') {
+			count++;
+		}
+		if (url.search === '?/sub') {
+			count--;
 		}
 
-		if (url.pathname === '/') {
-			return new Response(App(), {
-				headers: { 'Content-Type': 'text/html' }
+		if (url.search && request.headers.get('X-Sushi-Request') !== 'true') {
+			return new Response('', {
+				status: 303,
+				headers: {
+					Location: url.pathname,
+					'Content-Type': 'text/plain'
+				}
 			});
+		}
+
+		let page: (() => string) | null = null;
+		if (url.pathname === '/') {
+			page = App;
 		}
 
 		if (url.pathname === '/hello') {
-			return new Response(Hello(), {
-				headers: { 'Content-Type': 'text/html' }
-			});
+			page = Hello;
 		}
 
 		if (url.pathname === '/counter') {
-			return new Response(Counter(), {
-				headers: { 'Content-Type': 'text/html' }
-			});
+			page = Counter;
+		}
+
+		if (page) {
+			return PageResponse(page(), request);
 		}
 
 		return new Response('Not Found', { status: 404 });

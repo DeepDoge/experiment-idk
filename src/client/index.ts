@@ -1,3 +1,4 @@
+// TODO: Make history API back button work
 class SnippetElement extends HTMLElement {
 	static get observedAttributes() {
 		return ['src', 'load'];
@@ -17,15 +18,22 @@ class SnippetElement extends HTMLElement {
 		else this.setAttribute('src', value);
 	}
 
-	get url() {
+	#url = this.#getUrl();
+	#getUrl() {
 		return this.src ? new URL(this.src, location.href) : null;
+	}
+	get url() {
+		return this.#url as this['src'] extends string ? URL : null;
 	}
 
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
-		if (name === 'load') {
-			if (newValue !== null) {
-				this.#load().then(() => this.removeAttribute('load'));
-			}
+		switch (name) {
+			case 'src':
+				this.#url = this.#getUrl();
+				break;
+			case 'load':
+				if (newValue !== null) this.#load().then(() => this.removeAttribute('load'));
+				break;
 		}
 	}
 
@@ -40,29 +48,30 @@ class SnippetElement extends HTMLElement {
 }
 declare global {
 	interface HTMLElementTagNameMap {
-		'sushi-snippet': SnippetElement;
+		'snippet-x': SnippetElement;
+		'snippet-x[src]': SnippetElement & { src: NonNullable<SnippetElement['src']> };
 	}
 }
-customElements.define('sushi-snippet', SnippetElement);
+customElements.define('snippet-x', SnippetElement);
 
 class BoostedFormElement extends HTMLFormElement {
 	constructor() {
 		super();
 		this.addEventListener('submit', async (event) => {
 			const actionUrl = new URL(this.action, location.href);
-			if (actionUrl.host !== location.host) return;
+			if (actionUrl.origin !== location.origin) return;
 			event.preventDefault();
 
-			let closestSnippet = this.closest('sushi-snippet');
+			let closestSnippet = this.closest('snippet-x[src]');
+
 			if (actionUrl.pathname !== location.pathname) {
 				while (true) {
-					if (!closestSnippet?.url) break;
+					if (!closestSnippet) break;
 					if (actionUrl.pathname.startsWith(closestSnippet.url.pathname)) break;
-					closestSnippet = closestSnippet.parentElement?.closest('sushi-snippet') ?? null;
+					closestSnippet = closestSnippet.parentElement?.closest('snippet-x[src]') ?? null;
 				}
 			}
-
-			const fetchUrl = new URL(closestSnippet ? closestSnippet.url ?? actionUrl : location.href);
+			const fetchUrl = new URL(closestSnippet ? closestSnippet.url : location.href);
 			fetchUrl.search = actionUrl.search;
 
 			const response = await fetch(fetchUrl, {
@@ -77,23 +86,19 @@ class BoostedFormElement extends HTMLFormElement {
 			}
 
 			const html = await response.text();
-
-			if (closestSnippet) {
-				closestSnippet.innerHTML = html;
-			} else {
-				const dom = new DOMParser().parseFromString(html, 'text/html');
-				document.body.replaceWith(dom.body);
-				document.head.replaceWith(dom.head);
-			}
+			const body = closestSnippet ?? document.body;
+			const dom = new DOMParser().parseFromString(html, 'text/html');
+			body.replaceChildren(...dom.body.childNodes);
+			// document.head.replaceWith(dom.head);
 		});
 	}
 }
-customElements.define('boosted-form', BoostedFormElement, {
+customElements.define('form-x', BoostedFormElement, {
 	extends: 'form'
 });
 declare global {
 	interface HTMLElementTagNameMap {
-		'boosted-form': BoostedFormElement;
+		'form-x': BoostedFormElement;
 	}
 }
 
@@ -102,20 +107,17 @@ class BoostedAnchorElement extends HTMLAnchorElement {
 		super();
 		this.addEventListener('click', async (event) => {
 			const anchorUrl = new URL(this.href, location.href);
-			if (anchorUrl.host !== location.host) return;
+			if (anchorUrl.origin !== location.origin) return;
 			event.preventDefault();
 
-			let closestSnippet = this.closest('sushi-snippet');
+			let closestSnippet = this.closest('snippet-x[src]');
 			if (anchorUrl.pathname !== location.pathname) {
 				while (true) {
-					if (!closestSnippet?.url) break;
+					if (!closestSnippet) break;
 					if (anchorUrl.pathname.startsWith(closestSnippet.url.pathname)) break;
-					closestSnippet = closestSnippet.parentElement?.closest('sushi-snippet') ?? null;
+					closestSnippet = closestSnippet.parentElement?.closest('snippet-x[src]') ?? null;
 				}
 			}
-
-			const fetchUrl = new URL(closestSnippet ? closestSnippet.url ?? anchorUrl : location.href);
-			fetchUrl.search = anchorUrl.search;
 
 			const response = await fetch(anchorUrl, {
 				headers: {
@@ -127,25 +129,19 @@ class BoostedAnchorElement extends HTMLAnchorElement {
 			}
 
 			const html = await response.text();
+			const body = closestSnippet ?? document.body;
+			const dom = new DOMParser().parseFromString(html, 'text/html');
+			body.replaceChildren(...dom.body.childNodes);
 
-			if (closestSnippet) {
-				if (!closestSnippet.src) {
-					closestSnippet.src = anchorUrl.pathname;
-				}
-				closestSnippet.innerHTML = html;
-			} else {
-				const dom = new DOMParser().parseFromString(html, 'text/html');
-				document.body.replaceWith(dom.body);
-				document.head.replaceWith(dom.head);
-			}
+			history.pushState({}, '', anchorUrl.href);
 		});
 	}
 }
-customElements.define('boosted-anchor', BoostedAnchorElement, {
+customElements.define('anchor-x', BoostedAnchorElement, {
 	extends: 'a'
 });
 declare global {
 	interface HTMLElementTagNameMap {
-		'boosted-anchor': BoostedAnchorElement;
+		'anchor-x': BoostedAnchorElement;
 	}
 }
