@@ -60,17 +60,18 @@ class EnhancedFormElement extends HTMLFormElement {
 			if (actionUrl.origin !== location.origin) return;
 			event.preventDefault();
 
-			let closestSnippet = this.closest('snippet-x[src]');
+			let fetchUrl: URL;
+			if (actionUrl.pathname === location.pathname) {
+				let closestSnippet = this.closest('snippet-x[src]');
 
-			if (actionUrl.pathname !== location.pathname) {
-				while (true) {
-					if (!closestSnippet) break;
-					if (actionUrl.pathname.startsWith(closestSnippet.url.pathname)) break;
-					closestSnippet = closestSnippet.parentElement?.closest('snippet-x[src]') ?? null;
-				}
+				console.log({ closestSnippet: closestSnippet?.url.href });
+				fetchUrl = new URL(closestSnippet ? closestSnippet.url : location.href);
+				fetchUrl.search = actionUrl.search;
+
+				console.log({ fetchUrl: fetchUrl.href });
+			} else {
+				fetchUrl = new URL(actionUrl);
 			}
-			const fetchUrl = new URL(closestSnippet ? closestSnippet.url : location.href);
-			fetchUrl.search = actionUrl.search;
 
 			const response = await fetch(fetchUrl, {
 				method: this.method,
@@ -84,10 +85,8 @@ class EnhancedFormElement extends HTMLFormElement {
 			}
 
 			const html = await response.text();
-			const body = closestSnippet ?? document.body;
 			const dom = new DOMParser().parseFromString(html, 'text/html');
-			body.replaceChildren(...dom.body.childNodes);
-			// document.head.replaceWith(dom.head);
+			updateSlots(dom, fetchUrl.pathname);
 		});
 	}
 }
@@ -100,39 +99,47 @@ declare global {
 	}
 }
 
+async function handleGoto(event: MouseEvent) {
+	const url = new URL((event.target as HTMLAnchorElement).href, location.href);
+	if (url.origin !== location.origin) return;
+	event.preventDefault();
+	return await goto(url);
+}
+
+export async function goto(to: string | URL) {
+	const url = new URL(to, location.href);
+
+	const response = await fetch(to, {
+		headers: {
+			'X-Sushi-Request': 'true'
+		}
+	});
+	if (!response.ok) {
+		throw new Error(response.statusText);
+	}
+
+	const html = await response.text();
+	const dom = new DOMParser().parseFromString(html, 'text/html');
+
+	updateSlots(dom, url.pathname);
+}
+
+function updateSlots(dom: Document, pathname: string) {
+	const slotPath = `${pathname.slice(0, pathname.lastIndexOf('/'))}/`;
+	const slots = document.querySelectorAll(`snippet-x[src="${slotPath}"]`) as NodeListOf<SnippetElement>;
+
+	for (const slot of slots) {
+		console.log(slot);
+		slot.replaceChildren(...dom.body.cloneNode(true).childNodes);
+	}
+
+	history.pushState(null, '', pathname);
+}
+
 class EnhancedAnchorElement extends HTMLAnchorElement {
 	constructor() {
 		super();
-		/* 		this.addEventListener('click', async (event) => {
-			const anchorUrl = new URL(this.href, location.href);
-			if (anchorUrl.origin !== location.origin) return;
-			event.preventDefault();
-
-			let closestSnippet = this.closest('snippet-x[src]');
-			if (anchorUrl.pathname !== location.pathname) {
-				while (true) {
-					if (!closestSnippet) break;
-					if (anchorUrl.pathname.startsWith(closestSnippet.url.pathname)) break;
-					closestSnippet = closestSnippet.parentElement?.closest('snippet-x[src]') ?? null;
-				}
-			}
-
-			const response = await fetch(anchorUrl, {
-				headers: {
-					'X-Sushi-Request': 'true'
-				}
-			});
-			if (!response.ok) {
-				throw new Error(response.statusText);
-			}
-
-			const html = await response.text();
-			const body = closestSnippet ?? document.body;
-			const dom = new DOMParser().parseFromString(html, 'text/html');
-			body.replaceChildren(...dom.body.childNodes);
-
-			history.pushState({}, '', anchorUrl.href);
-		}); */
+		this.addEventListener('click', handleGoto);
 	}
 }
 customElements.define('anchor-x', EnhancedAnchorElement, {

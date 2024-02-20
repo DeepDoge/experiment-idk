@@ -3,7 +3,7 @@
 	"module": "index.ts",
 	"type": "module",
 	"scripts": {
-		"dev": "bun run --hot ./src/server/entry.ts",
+		"dev": "bun run --hot ./src/server/start.ts",
 		"dev:client": "bun build --root ./src/client/ ./src/client/index.ts --outdir=out --watch",
 		"format": "prettier --plugin-search-dir . --write ."
 	},
