@@ -1,12 +1,14 @@
+import type { Server } from 'bun';
 import { html } from './html'; /* assert { type: 'macro' }; */
 
 let count = 0;
+let foo = 'foo';
 
 function randomId() {
 	return Math.random().toString(36).slice(2);
 }
 
-function Layout(innerHTML: string) {
+function Layout(slot: string) {
 	return html` <!doctype html>
 		<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 			<head>
@@ -25,7 +27,7 @@ function Layout(innerHTML: string) {
 				</style>
 			</head>
 			<body>
-				${innerHTML}
+				${slot}
 			</body>
 		</html>`;
 }
@@ -52,27 +54,85 @@ function Counter() {
 	`;
 }
 
-function Hello() {
+function Hello(slot: string) {
 	return html`
 		<div>Hello</div>
 		<a is="anchor-x" href="/">Back</a>
+		${slot ?? html`<a is="anchor-x" href="/hello/foo">Foo</a>`}
 	`;
 }
 
-function PageResponse(pageHTML: string, request: Request) {
-	if (request.headers.get('X-Sushi-Request') !== 'true') {
-		return new Response(Layout(html`<snippet-x src="${new URL(request.url).pathname}">${pageHTML}</snippet-x>`), {
-			headers: { 'Content-Type': 'text/html' }
-		});
+function Foo() {
+	return html`
+		<form action="?/setFoo" method="post" is="form-x">
+			<input name="foo" value="${foo}" />
+			<button type="submit">Set</button>
+		</form>
+		<div>${foo}</div>
+	`;
+}
+
+type Route = {
+	page(slot?: string): string;
+	[path: `/${string}`]: Route;
+};
+
+const rootRoute = {
+	page: Layout,
+	'/': {
+		page: App
+	},
+	'/hello': {
+		page: Hello,
+		'/foo': {
+			page: Foo
+		}
+	},
+	'/counter': {
+		page: Counter
 	}
-	return new Response(pageHTML, {
-		headers: { 'Content-Type': 'text/html' }
-	});
+} as const satisfies Route;
+
+type Action = (request: Request, server: Server) => void | Promise<void>;
+type Actions = Record<string, Action>;
+
+const actions = {
+	add(request, server) {
+		count++;
+	},
+	sub(request, server) {
+		count--;
+	},
+	async setFoo(request, server) {
+		const value = await request.formData().then((data) => data.get('foo'));
+		foo = String(value);
+	}
+} satisfies Actions;
+
+const actionsMap = new Map<string, Action>(Object.entries(actions));
+function renderRoute(request: Request, route: Route, pathname: string, offset = 1): string | null {
+	let end = pathname.indexOf('/', offset);
+	if (end === -1) {
+		end = pathname.length;
+	}
+
+	const segment = pathname.slice(offset, end);
+	const nextRoute = route[`/${segment}` as const];
+
+	if (request.headers.get('X-Sushi-Request') === 'true') {
+		if (nextRoute) return renderRoute(request, nextRoute, pathname, end + 1);
+		return route.page();
+	}
+
+	const slot = nextRoute ? renderRoute(request, nextRoute, pathname, end + 1) : null;
+	if (slot === null) return route.page();
+	return route.page(html` <snippet-x src="${pathname.slice(0, end)}"> ${slot} </snippet-x> `);
 }
 
 Bun.serve({
 	async fetch(request, server) {
 		const url = new URL(request.url);
+		console.log(`${request.method} ${url.pathname}${url.search}`);
 
 		if (url.pathname === '/sushi.js') {
 			// const sushiPath = new URL('../../out/index.js', import.meta.url).pathname;
@@ -81,38 +141,24 @@ Bun.serve({
 			});
 		}
 
-		if (url.search === '?/add') {
-			count++;
-		}
-		if (url.search === '?/sub') {
-			count--;
-		}
-
-		if (url.search && request.headers.get('X-Sushi-Request') !== 'true') {
-			return new Response('', {
-				status: 303,
-				headers: {
-					Location: url.pathname,
-					'Content-Type': 'text/plain'
-				}
-			});
+		if (url.search.startsWith('?/')) {
+			const actionName = url.search.slice(2);
+			const action = actionsMap.get(actionName);
+			await action?.(request, server);
+			if (request.headers.get('X-Sushi-Request') !== 'true') {
+				return new Response('', {
+					status: 303,
+					headers: {
+						Location: url.pathname,
+						'Content-Type': 'text/plain'
+					}
+				});
+			}
 		}
 
-		let page: (() => string) | null = null;
-		if (url.pathname === '/') {
-			page = App;
-		}
-
-		if (url.pathname === '/hello') {
-			page = Hello;
-		}
-
-		if (url.pathname === '/counter') {
-			page = Counter;
-		}
-
-		if (page) {
-			return PageResponse(page(), request);
+		let page = renderRoute(request, rootRoute, url.pathname);
+		if (page !== null) {
+			return new Response(page, { headers: { 'Content-Type': 'text/html' } });
 		}
 
 		return new Response('Not Found', { status: 404 });
