@@ -1,15 +1,18 @@
 import { html } from '../html';
+import { isAction, type LoadEvent } from '../start';
 
 let count = 0;
 
-function add(request: Request) {
+function add() {
 	count++;
 }
-function sub(request: Request) {
+function sub() {
 	count--;
 }
 
-export function Counter() {
+export function Counter(event: LoadEvent) {
+	const added = isAction(event, add);
+
 	return html`
 		<div>
 			<form id="${add}" hidden action="?/${add}" method="post" is="form-x"></form>
@@ -17,6 +20,7 @@ export function Counter() {
 			<button form="${sub}">-</button>
 			<span>${count}</span>
 			<button form="${add}">+</button>
+			${added ? `<div>Added</div>` : ``}
 		</div>
 	`;
 }

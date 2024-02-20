@@ -87,6 +87,7 @@ class EnhancedFormElement extends HTMLFormElement {
 			const html = await response.text();
 			const dom = new DOMParser().parseFromString(html, 'text/html');
 			updateSlots(dom, fetchUrl.pathname);
+			pushState(actionUrl.pathname);
 		});
 	}
 }
@@ -98,6 +99,21 @@ declare global {
 		'form-x': EnhancedFormElement;
 	}
 }
+
+function pushState(pathname: string) {
+	if (pathname === location.pathname) return;
+	history.pushState(pathname, '', pathname);
+}
+history.scrollRestoration = 'auto';
+window.addEventListener('load', () => {
+	history.replaceState(location.pathname, '', location.pathname);
+});
+window.addEventListener('popstate', (event) => {
+	const pathname = event.state as unknown;
+	if (typeof pathname !== 'string') return;
+	console.log({ pathname });
+	goto(pathname);
+});
 
 async function handleGoto(event: MouseEvent) {
 	const url = new URL((event.target as HTMLAnchorElement).href, location.href);
@@ -122,18 +138,19 @@ export async function goto(to: string | URL) {
 	const dom = new DOMParser().parseFromString(html, 'text/html');
 
 	updateSlots(dom, url.pathname);
+	pushState(url.pathname);
 }
 
 function updateSlots(dom: Document, pathname: string) {
 	const slotPath = `${pathname.slice(0, pathname.lastIndexOf('/'))}/`;
-	const slots = document.querySelectorAll(`snippet-x[src="${slotPath}"]`) as NodeListOf<SnippetElement>;
+	console.log({ slotPath });
+	const slots = document.querySelectorAll(`snippet-x[src^="${slotPath}"]`) as NodeListOf<SnippetElement>;
 
 	for (const slot of slots) {
 		console.log(slot);
 		slot.replaceChildren(...dom.body.cloneNode(true).childNodes);
+		slot.src = pathname;
 	}
-
-	history.pushState(null, '', pathname);
 }
 
 class EnhancedAnchorElement extends HTMLAnchorElement {

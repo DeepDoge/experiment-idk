@@ -1,7 +1,27 @@
-import { getActionById, html } from './html';
+import type { Server } from 'bun';
+import { getActionById, html, type Action } from './html';
 import { rootRoute, type Route } from './routes';
 
-function renderRoute(request: Request, route: Route, pathname: string, offset = 1): string | null {
+type URL = InstanceType<typeof URL>; // Ok this is fucking weird
+
+export type LoadEvent = {
+	url: URL;
+	request: Request;
+	server: Server;
+	action?: {
+		call: Action;
+		data: unknown;
+	};
+};
+
+export function isAction<T extends Action>(
+	event: LoadEvent,
+	action: T
+): event is LoadEvent & { action: { call: T; data?: Awaited<ReturnType<T>> } } {
+	return event.action?.call === action;
+}
+
+function renderRoute(event: LoadEvent, route: Route, pathname: string, offset = 1): string | null {
 	let end = pathname.indexOf('/', offset);
 	if (end === -1) {
 		end = pathname.length;
@@ -10,13 +30,13 @@ function renderRoute(request: Request, route: Route, pathname: string, offset = 
 	const segment = pathname.slice(offset, end);
 	const nextRoute = route[`/${segment}` as const];
 
-	if (request.headers.get('X-Sushi-Request') === 'true') {
-		if (nextRoute) return renderRoute(request, nextRoute, pathname, end + 1);
-		return route.page(html` <snippet-x src="${pathname.slice(0, offset)}/"></snippet-x> `);
+	if (event.request.headers.get('X-Sushi-Request') === 'true') {
+		if (nextRoute) return renderRoute(event, nextRoute, pathname, end + 1);
+		return route.page(event, html` <snippet-x src="${pathname.slice(0, end)}/"></snippet-x> `);
 	}
 
-	const slot = nextRoute ? renderRoute(request, nextRoute, pathname, end + 1) : null;
-	return route.page(html` <snippet-x src="${pathname.slice(0, offset)}">${slot ?? ''}</snippet-x> `);
+	const slot = nextRoute ? renderRoute(event, nextRoute, pathname, end + 1) : null;
+	return route.page(event, html` <snippet-x src="${pathname.slice(0, end)}">${slot ?? ''}</snippet-x> `);
 }
 
 Bun.serve({
@@ -31,22 +51,31 @@ Bun.serve({
 			});
 		}
 
+		const event: LoadEvent = {
+			url,
+			request,
+			server
+		};
+
 		if (url.search.startsWith('?/')) {
 			const actionName = url.search.slice(2);
 			const action = getActionById(actionName);
-			await action?.(request);
-			if (request.headers.get('X-Sushi-Request') !== 'true') {
+			if (action) {
+				const data = await action(event);
+				event.action = { call: action, data };
+			}
+			/* if (request.headers.get('X-Sushi-Request') !== 'true') {
 				return new Response('', {
-					status: 303,
+					status: 302,
 					headers: {
 						Location: url.pathname,
 						'Content-Type': 'text/plain'
 					}
 				});
-			}
+			} */
 		}
 
-		let page = renderRoute(request, rootRoute, url.pathname);
+		let page = renderRoute(event, rootRoute, url.pathname);
 		if (page !== null) {
 			return new Response(page, { headers: { 'Content-Type': 'text/html' } });
 		}

@@ -1,7 +1,8 @@
 import { html } from '../html';
+import type { LoadEvent } from '../start';
 import { fastRandomId } from '../utils/randomId';
 
-export function Hello(slot: string) {
+export function Hello(event: LoadEvent, slot: string) {
 	return html`
 		<div>Hello ${fastRandomId()}</div>
 		<a is="anchor-x" href="/">Home</a>

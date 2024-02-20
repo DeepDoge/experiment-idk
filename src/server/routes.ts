@@ -2,9 +2,10 @@ import { Counter } from './lib/Counter';
 import { Bar, Foo, Hello } from './lib/Hello';
 import { Home } from './lib/Home';
 import { Layout } from './lib/Layout';
+import type { LoadEvent } from './start';
 
 export type Route = {
-	page(slot?: string): string;
+	page: (() => string) | ((event: LoadEvent) => string) | ((event: LoadEvent, slot: string) => string);
 	[path: `/${string}`]: Route;
 };
 

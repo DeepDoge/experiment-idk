@@ -1,19 +1,19 @@
 {
-	"name": "sushi-js",
-	"module": "index.ts",
-	"type": "module",
-	"scripts": {
-		"dev": "bun run --hot ./src/server/start.ts",
-		"dev:client": "bun build --root ./src/client/ ./src/client/index.ts --outdir=out --watch",
-		"format": "prettier --plugin-search-dir . --write ."
-	},
-	"devDependencies": {
-		"@total-typescript/ts-reset": "^0.5.1",
-		"@types/bun": "latest",
-		"prettier": "^3.2.5",
-		"prettier-plugin-organize-imports": "^3.2.4"
-	},
-	"peerDependencies": {
-		"typescript": "^5.0.0"
-	}
+  "name": "sushi-js",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot ./src/server/start.ts",
+    "dev:client": "bun build --root ./src/client/ ./src/client/index.ts --outdir=out --watch",
+    "format": "prettier --plugin-search-dir . --write ."
+  },
+  "devDependencies": {
+    "@total-typescript/ts-reset": "^0.5.1",
+    "@types/bun": "latest",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
 }

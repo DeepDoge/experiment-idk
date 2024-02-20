@@ -1,7 +1,8 @@
+import type { LoadEvent } from './start';
 import { fastRandomId } from './utils/randomId';
 import { WeakRefMap } from './weakRefMap';
 
-export type Action = Function | ((request: Request) => unknown);
+export type Action = ((event: LoadEvent) => unknown) | (() => unknown);
 
 const actionsMap = new WeakRefMap<string, Action>();
 export function getActionById(id: string): Action | null {
@@ -18,11 +19,12 @@ export function html(strings: TemplateStringsArray, ...values: unknown[]) {
 		strings,
 		...values.map((value) => {
 			if (value instanceof Function) {
-				let id = getActionId(value);
+				const valueAsAction = value as Action;
+				let id = getActionId(valueAsAction);
 				if (!id) {
 					id = `${value.name}-${fastRandomId()}`;
-					actionsMap.set(id, value);
-					actionIdMap.set(value, id);
+					actionsMap.set(id, valueAsAction);
+					actionIdMap.set(valueAsAction, id);
 				}
 
 				return id;
