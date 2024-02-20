@@ -27,3 +27,7 @@ export function Counter(event: LoadEvent) {
 		</div>
 	`;
 }
+
+export function IsOdd(event: LoadEvent) {
+	return html`<div>${count % 2 === 1 ? 'Odd' : 'Even'}</div>`;
+}

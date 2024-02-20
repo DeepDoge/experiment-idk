@@ -1,4 +1,4 @@
-import { Counter } from './lib/Counter';
+import { Counter, IsOdd } from './lib/Counter';
 import { Bar, Foo, Hello } from './lib/Hello';
 import { Home } from './lib/Home';
 import { Layout } from './lib/Layout';
@@ -24,6 +24,9 @@ export const rootRoute = {
 		}
 	},
 	'/counter': {
-		page: Counter
+		page: Counter,
+		'/is-odd': {
+			page: IsOdd
+		}
 	}
 } as const satisfies Route;

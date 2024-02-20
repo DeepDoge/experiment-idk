@@ -1,6 +1,7 @@
 import { html } from '../html';
 import type { LoadEvent } from '../start';
 import { fastRandomId } from '../utils/randomId';
+import { IsOdd } from './Counter';
 
 export function Layout(event: LoadEvent, slot: string) {
 	return html`<!doctype html>
@@ -22,6 +23,7 @@ export function Layout(event: LoadEvent, slot: string) {
 			</head>
 			<body>
 				<div>Layout: ${fastRandomId()}</div>
+				<snippet-x src="/counter/is-odd/"> ${IsOdd(event)} </snippet-x>
 				${slot}
 			</body>
 		</html>`;
