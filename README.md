@@ -153,3 +153,61 @@ Ok so a slot path ends with `/`, so if a snippet src endsWith `/` it acts like `
 Writing snippet is kinda hard, so im just gonna call it snip. maybe i call the whole library snip and framework snip-kit.
 
 All we have is a new element called `snip`. (and enhanced, version of `a` and `form`)
+
+Alright so new goal.
+
+Both `a` and `form` does the same job. snippets use shadowdom, to show content so its isolated.
+when an enhanced `form` or `a` submitted or clicked, and if there is js, we find the closest root of the element and if its a snip,
+we get the `src` from it, resolve it into a full url, and use that url to do the thing.
+
+So if the host changed, we let the browser handle it. if pathname changed, it causes a route change.
+And if pathname didn't change, we just update the snips(s) that listens to the path. that simple.
+
+We can also have a `data-update` attribute on `form` and `a` and we use it instead of the `src` of the root snip.
+If root isn't a snip, nothing happens.
+
+That's another rule if we can't decide what do update we don't update anything. So developer doesn't go "wtf, why this thing updated?".
+
+I think this is an epic way.
+
+So only thing left to decide how to work is routing and i have a few ideas about it rn.
+
+In sveltekit and many other frameworks, its either server side code is seperated or code both runs on server and client. But we don't want that. We want a server side code and a client side, we dont want full hydration, we dont wanna override what the server sends on hydration.
+So since server sends the html the code that generates the html runs on server. only way to run client side code is.
+importing into html with `<script>` probably, and using custom elements.
+
+- So HTML is app state, by default
+- Every action works without JS, by default
+- If JS is enabled, we enhance the experience
+- We respect the semantics of HTML, and native js features
+- We use paths to build a hierarchy of snippets, so we can update them easily, we don't use ids like HTMX
+- And if you want client side code, you can import it with `<script>` and use custom elements
+
+I think without going further, with this is main point having snips and enhanced forms and links.
+I think having a simple library that does this is enough. We shouldnt go further than this.
+
+Then i can make a framework that uses this library. I think this is a good idea.
+
+But I also wanna improve cherry-ts with the things i learned from this.
+which is kinda hard because cherry-ts design to be a SPA library. And it relays on heap mostly.
+
+I think the plan is im gonna treat this and cherry-ts as different projects.
+
+but i wanna go from this to a something that work without a server.
+
+i wanna build it first as something that requires a server, then i wanna make it work without a server.
+
+then maybe i can focus on this instead of cherry-ts.
+
+cherry-ts gonna get updates still, i wanna make it into my previous vision.
+and build eternis with it.
+
+once i build eternis with it, that means that its a working library.
+
+then i can make docs for it.
+
+and then go further with this. and maybe make something better than cherry-ts.
+
+then use it to remake eternis.
+
+i think this is a good plan.
